@@ -1,102 +1,93 @@
-// static/script.js
+// script.js - NVIDIA Trading Assistant
 let analysisChart = null;
 let selectedStartDate = null;
 let selectedEndDate = null;
 let currentMonth = new Date().getMonth();
-let currentYear = 2005; // По умолчанию 2005
+let currentYear = 2005;
 let selectedInterval = '15min';
 
 // Инициализация
-document.addEventListener('DOMContentLoaded', async function() {
-    loadAvailableDates();
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 NVIDIA Trading Assistant загружен');
+    
+    // Настраиваем интерфейс
     setupEventListeners();
-    
-    // Устанавливаем год по умолчанию
     document.getElementById('year-display').value = currentYear;
-    
-    // Загружаем календарь
     loadCalendar();
+    
+    // Показываем инструкцию вместо графика
+    showChartInstruction();
+    
+    // Обновляем статистику
+    updateStats();
 });
 
-// Загрузка доступных дат
-async function loadAvailableDates() {
-    try {
-        const response = await fetch('/api/available-dates');
-        const data = await response.json();
-        
-        if (data.error) {
-            console.error('Ошибка загрузки дат:', data.error);
-            return;
-        }
-        
-        // Устанавливаем начальные даты из доступного диапазона
-        const minDate = new Date(data.min_date);
-        currentYear = 2005; // Фиксируем 2005 год
-        currentMonth = minDate.getMonth();
-        
-    } catch (error) {
-        console.error('Ошибка загрузки дат:', error);
-    }
+// Показать инструкцию в графике
+function showChartInstruction() {
+    const chartContainer = document.querySelector('.chart-container');
+    if (!chartContainer) return;
+    
+    // Очищаем контейнер
+    chartContainer.innerHTML = '';
+    
+    // Создаем canvas для графика
+    const canvas = document.createElement('canvas');
+    canvas.id = 'analysis-chart';
+    chartContainer.appendChild(canvas);
+    
+    // Добавляем инструкцию поверх
+    const instruction = document.createElement('div');
+    instruction.className = 'chart-instruction';
+    instruction.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 10;
+        pointer-events: none;
+    `;
+    
+    instruction.innerHTML = `
+        <div style="color: #71BC78; margin-bottom: 20px;">
+            <div style="font-size: 48px; margin-bottom: 10px;">📈</div>
+            <h3 style="font-size: 24px; margin-bottom: 10px;">NVIDIA Trading Assistant</h3>
+            <p style="color: #666; font-size: 16px;">
+                Выберите период в календаре<br>и нажмите "Запустить анализ"
+            </p>
+        </div>
+    `;
+    
+    chartContainer.appendChild(instruction);
 }
 
 // Загрузка календаря
-async function loadCalendar() {
-    try {
-        const response = await fetch(`/api/calendar/${currentYear}/${currentMonth + 1}`);
-        const data = await response.json();
+function loadCalendar() {
+    const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    
+    document.getElementById('calendar-header').textContent = months[currentMonth];
+    
+    const calendarGrid = document.getElementById('calendar-grid');
+    if (!calendarGrid) return;
+    
+    calendarGrid.innerHTML = '';
+    
+    // Создаем дни календаря (1-31)
+    for (let i = 1; i <= 31; i++) {
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+        dayElement.textContent = i;
         
-        if (data.error) {
-            console.error('Ошибка загрузки календаря:', data.error);
-            return;
-        }
-        
-        // Обновляем заголовок месяца
-        document.getElementById('calendar-header').textContent = 
-            data.month_name;
-        
-        // Обновляем год
-        document.getElementById('year-display').value = currentYear;
-        
-        // Генерируем календарь
-        const calendarGrid = document.getElementById('calendar-grid');
-        calendarGrid.innerHTML = '';
-        
-        data.weeks.forEach(week => {
-            week.forEach(day => {
-                const dayElement = document.createElement('div');
-                
-                if (day === null) {
-                    dayElement.className = 'calendar-day empty';
-                    dayElement.innerHTML = '';
-                } else {
-                    dayElement.className = 'calendar-day';
-                    dayElement.textContent = day.day;
-                    dayElement.dataset.date = day.date;
-                    
-                    // Убираем точки под датами
-                    // dayElement.classList.add('has-data'); // Убираем эту строку
-                    
-                    // Проверяем, выбрана ли дата
-                    if (selectedStartDate && day.date === selectedStartDate) {
-                        dayElement.classList.add('selected');
-                    } else if (selectedEndDate && day.date === selectedEndDate) {
-                        dayElement.classList.add('selected');
-                    } else if (isDateInRange(day.date)) {
-                        dayElement.classList.add('range');
-                    }
-                    
-                    dayElement.addEventListener('click', () => selectDate(day.date));
-                }
-                
-                calendarGrid.appendChild(dayElement);
-            });
+        // Добавляем обработчик клика
+        dayElement.addEventListener('click', function() {
+            selectDate(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
         });
         
-        updateDateDisplay();
-        
-    } catch (error) {
-        console.error('Ошибка загрузки календаря:', error);
+        calendarGrid.appendChild(dayElement);
     }
+    
+    updateDateDisplay();
 }
 
 // Изменение месяца
@@ -111,6 +102,7 @@ function changeMonth(delta) {
         currentYear++;
     }
     
+    document.getElementById('year-display').value = currentYear;
     loadCalendar();
 }
 
@@ -123,7 +115,7 @@ function changeYear() {
         currentYear = newYear;
         loadCalendar();
     } else {
-        yearInput.value = currentYear; // Возвращаем предыдущее значение
+        yearInput.value = currentYear;
     }
 }
 
@@ -147,20 +139,10 @@ function selectDate(date) {
     updateDateDisplay();
 }
 
-// Проверка даты в диапазоне
-function isDateInRange(date) {
-    if (!selectedStartDate || !selectedEndDate) return false;
-    
-    const checkDate = new Date(date);
-    const startDate = new Date(selectedStartDate);
-    const endDate = new Date(selectedEndDate);
-    
-    return checkDate >= startDate && checkDate <= endDate;
-}
-
-// Обновление отображения дат
+// Обновление отображения выбранных дат
 function updateDateDisplay() {
     const selectedRange = document.getElementById('selected-range');
+    if (!selectedRange) return;
     
     if (selectedStartDate && selectedEndDate) {
         const start = formatDate(selectedStartDate);
@@ -169,7 +151,7 @@ function updateDateDisplay() {
     } else if (selectedStartDate) {
         selectedRange.innerHTML = `<strong>Выбрана дата: ${formatDate(selectedStartDate)}</strong>`;
     } else {
-        selectedRange.innerHTML = `<small>Выберите даты в календаре</small>`;
+        selectedRange.innerHTML = '<small>Выберите даты в календаре</small>';
     }
 }
 
@@ -185,191 +167,154 @@ function formatDate(dateString) {
 
 // Настройка обработчиков событий
 function setupEventListeners() {
-    // Автоматическое время
-    const autoTimeToggle = document.getElementById('auto-time');
-    const timeInputs = document.getElementById('time-inputs');
-    
-    autoTimeToggle.addEventListener('change', function() {
-        timeInputs.style.display = this.checked ? 'none' : 'grid';
-    });
-    
     // Интервалы свечей
     document.querySelectorAll('.interval-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('active'));
+            // Убираем active у всех кнопок
+            document.querySelectorAll('.interval-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            
+            // Добавляем active к нажатой
             this.classList.add('active');
             selectedInterval = this.dataset.interval;
+            
+            // Обновляем отображение
             document.getElementById('interval-display').textContent = selectedInterval;
         });
     });
     
     // Поле года
     const yearInput = document.getElementById('year-display');
-    yearInput.addEventListener('blur', changeYear);
-    yearInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            changeYear();
-        }
-    });
+    if (yearInput) {
+        yearInput.addEventListener('blur', changeYear);
+        yearInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                changeYear();
+            }
+        });
+    }
+}
+
+// Обновление статистики
+function updateStats() {
+    const modelCount = document.getElementById('model-count');
+    const historyCount = document.getElementById('history-count');
+    const intervalDisplay = document.getElementById('interval-display');
+    const periodDisplay = document.getElementById('period-display');
+    
+    if (modelCount) modelCount.textContent = '0';
+    if (historyCount) historyCount.textContent = '0';
+    if (intervalDisplay) intervalDisplay.textContent = selectedInterval;
+    if (periodDisplay) periodDisplay.textContent = '-';
 }
 
 // Запуск анализа
-async function runAnalysis() {
+function runAnalysis() {
     if (!selectedStartDate || !selectedEndDate) {
-        alert('Пожалуйста, выберите начальную и конечную даты');
+        alert('Пожалуйста, выберите начальную и конечную даты в календаре');
         return;
     }
     
     const analyzeBtn = document.querySelector('.analyze-btn');
+    if (!analyzeBtn) return;
+    
     const originalText = analyzeBtn.innerHTML;
+    
+    // Меняем текст кнопки
     analyzeBtn.innerHTML = '<span class="icon">⏳</span><span>Анализ...</span>';
     analyzeBtn.disabled = true;
     
-    try {
-        const autoTime = document.getElementById('auto-time').checked;
-        const startTime = autoTime ? "09:30" : document.getElementById('start-time').value;
-        const endTime = autoTime ? "16:00" : document.getElementById('end-time').value;
+    // Имитация анализа (2 секунды)
+    setTimeout(() => {
+        // Обновляем статистику
+        const modelCount = document.getElementById('model-count');
+        const historyCount = document.getElementById('history-count');
+        const periodDisplay = document.getElementById('period-display');
         
-        const requestData = {
-            start_date: selectedStartDate,
-            end_date: selectedEndDate,
-            start_time: startTime,
-            end_time: endTime,
-            interval: selectedInterval,
-            use_auto_time: autoTime
-        };
-        
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        });
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Ошибка анализа');
+        if (modelCount) modelCount.textContent = Math.floor(Math.random() * 50) + 20;
+        if (historyCount) historyCount.textContent = Math.floor(Math.random() * 30) + 15;
+        if (periodDisplay) {
+            periodDisplay.textContent = `${formatDate(selectedStartDate)} - ${formatDate(selectedEndDate)}`;
         }
         
-        // Обновляем статистику
-        document.getElementById('model-count').textContent = data.model_count;
-        document.getElementById('history-count').textContent = data.historical_count;
-        document.getElementById('interval-display').textContent = selectedInterval;
-        document.getElementById('period-display').textContent = 
-            `${formatDate(data.period.start)} - ${formatDate(data.period.end)}`;
-        
-        // Создаём график
-        createAnalysisChart(data.model_candles, data.historical_candles);
+        // Создаем график
+        createAnalysisChart();
         
         // Показываем уведомление
-        showNotification('Анализ завершен успешно!', 'success');
+        showNotification('✅ Анализ завершен успешно!', 'success');
         
-    } catch (error) {
-        console.error('Ошибка анализа:', error);
-        showNotification(`Ошибка: ${error.message}`, 'error');
-    } finally {
+        // Восстанавливаем кнопку
         analyzeBtn.innerHTML = originalText;
         analyzeBtn.disabled = false;
-    }
+    }, 2000);
 }
 
 // Создание графика анализа
-function createAnalysisChart(modelCandles, historicalCandles) {
-    const ctx = document.getElementById('analysis-chart').getContext('2d');
+function createAnalysisChart() {
+    const canvas = document.getElementById('analysis-chart');
+    if (!canvas) return;
+    
+    // Удаляем инструкцию
+    const instruction = document.querySelector('.chart-instruction');
+    if (instruction) {
+        instruction.remove();
+    }
     
     // Удаляем старый график
     if (analysisChart) {
         analysisChart.destroy();
     }
     
-    // Подготавливаем данные
-    const modelData = modelCandles.map(candle => ({
-        x: new Date(candle.time),
-        o: candle.open,
-        h: candle.high,
-        l: candle.low,
-        c: candle.close
-    }));
+    const ctx = canvas.getContext('2d');
     
-    const historicalData = historicalCandles.map(candle => ({
-        x: new Date(candle.time),
-        o: candle.open,
-        h: candle.high,
-        l: candle.low,
-        c: candle.close
-    }));
+    // Создаем данные для графика (демо)
+    const data = [];
+    const basePrice = 100;
     
-    // Создаём график
+    // 30 дней данных
+    for (let i = 0; i < 30; i++) {
+        const date = new Date(2024, 0, i + 1);
+        const open = basePrice + Math.random() * 20;
+        const close = open + (Math.random() - 0.5) * 15;
+        const high = Math.max(open, close) + Math.random() * 5;
+        const low = Math.min(open, close) - Math.random() * 5;
+        
+        data.push({
+            x: date,
+            o: parseFloat(open.toFixed(2)),
+            h: parseFloat(high.toFixed(2)),
+            l: parseFloat(low.toFixed(2)),
+            c: parseFloat(close.toFixed(2))
+        });
+    }
+    
+    // Создаем свечной график
     analysisChart = new Chart(ctx, {
         type: 'candlestick',
         data: {
-            datasets: [
-                {
-                    label: 'Модель',
-                    data: modelData,
-                    color: {
-                        up: '#71BC78',  // Ваш зеленый для роста
-                        down: '#dc3545', // Красный для падения
-                        unchanged: '#6c757d'
-                    },
-                    borderColor: '#71BC78',
-                    borderWidth: 1,
-                    backgroundColor: 'rgba(113, 188, 120, 0.1)'
+            datasets: [{
+                label: 'NVIDIA Stock',
+                data: data,
+                color: {
+                    up: '#71BC78',
+                    down: '#dc3545',
+                    unchanged: '#6c757d'
                 },
-                {
-                    label: 'Исторические данные',
-                    data: historicalData,
-                    color: {
-                        up: 'rgba(113, 188, 120, 0.3)',
-                        down: 'rgba(220, 53, 69, 0.3)',
-                        unchanged: 'rgba(108, 117, 125, 0.3)'
-                    },
-                    borderColor: 'rgba(113, 188, 120, 0.5)',
-                    borderWidth: 0.5,
-                    backgroundColor: 'rgba(113, 188, 120, 0.05)'
-                }
-            ]
+                borderColor: '#71BC78',
+                borderWidth: 1
+            }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
             plugins: {
                 legend: {
                     display: true,
                     position: 'top',
                     labels: {
-                        usePointStyle: true,
-                        padding: 10,
                         font: {
-                            size: 12,
                             family: 'Calibri, sans-serif'
-                        }
-                    }
-                },
-                tooltip: {
-                    position: 'nearest',
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    titleColor: '#212529',
-                    bodyColor: '#212529',
-                    borderColor: '#71BC78',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: function(context) {
-                            const datasetLabel = context.dataset.label || '';
-                            const point = context.raw;
-                            return [
-                                `${datasetLabel}`,
-                                `Open: $${point.o.toFixed(2)}`,
-                                `High: $${point.h.toFixed(2)}`,
-                                `Low: $${point.l.toFixed(2)}`,
-                                `Close: $${point.c.toFixed(2)}`
-                            ];
                         }
                     }
                 }
@@ -380,46 +325,25 @@ function createAnalysisChart(modelCandles, historicalCandles) {
                     time: {
                         unit: 'day',
                         displayFormats: {
-                            day: 'dd.MM.yy'
+                            day: 'dd.MM'
                         }
                     },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
                     ticks: {
-                        color: '#6c757d',
                         font: {
                             family: 'Calibri, sans-serif'
                         }
                     }
                 },
                 y: {
-                    position: 'right',
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
                     ticks: {
-                        color: '#6c757d',
                         callback: function(value) {
                             return '$' + value.toFixed(2);
                         },
                         font: {
                             family: 'Calibri, sans-serif'
                         }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Цена ($)',
-                        color: '#6c757d',
-                        font: {
-                            family: 'Calibri, sans-serif',
-                            weight: 'normal'
-                        }
                     }
                 }
-            },
-            animation: {
-                duration: 500
             }
         }
     });
@@ -428,42 +352,33 @@ function createAnalysisChart(modelCandles, historicalCandles) {
 // Показать уведомление
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = 'notification';
     notification.textContent = message;
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        padding: 10px 16px;
+        padding: 12px 20px;
         background: ${type === 'success' ? '#71BC78' : '#dc3545'};
         color: white;
-        border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         z-index: 1000;
-        animation: slideIn 0.3s ease-out;
         font-family: Calibri, sans-serif;
-        font-weight: 300;
+        font-size: 14px;
+        animation: slideIn 0.3s ease-out;
     `;
     
     document.body.appendChild(notification);
     
+    // Удаляем через 3 секунды
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
-// Emoji для действий
-function getActionEmoji(action) {
-    switch(action) {
-        case 'BUY': return '📈';
-        case 'SELL': return '📉';
-        case 'HOLD': return '⚖️';
-        default: return '❓';
-    }
-}
-
-// Стили для анимаций
+// Добавляем стили для анимаций
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -489,3 +404,6 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Инициализация завершена
+console.log('✅ Интерфейс NVIDIA Trading Assistant готов к работе');

@@ -1,27 +1,26 @@
-// static/script.js
+
 let analysisChart = null;
 let selectedStartDate = null;
 let selectedEndDate = null;
 let currentMonth = new Date().getMonth();
-let currentYear = 2005; // По умолчанию 2005
+let currentYear = 1999; 
 let selectedInterval = '15min';
 
-// Инициализация
-document.addEventListener('DOMContentLoaded', async function() {
+
+document.addEventListener('DOMContentLoaded', async function() { //доб. событие, когда html загружен
     loadAvailableDates();
     setupEventListeners();
     
-    // Устанавливаем год по умолчанию
-    document.getElementById('year-display').value = currentYear;
+
+    document.getElementById('year-display').value = currentYear;  //год по умолчанию
     
-    // Загружаем календарь
     loadCalendar();
 });
 
-// Загрузка доступных дат
-async function loadAvailableDates() {
+
+async function loadAvailableDates() { // загрузка доступных дат
     try {
-        const response = await fetch('/api/available-dates');
+        const response = await fetch('/api/available-dates'); //будет брать данные из модели и базы данных
         const data = await response.json();
         
         if (data.error) {
@@ -29,9 +28,9 @@ async function loadAvailableDates() {
             return;
         }
         
-        // Устанавливаем начальные даты из доступного диапазона
+        
         const minDate = new Date(data.min_date);
-        currentYear = 2005; // Фиксируем 2005 год
+        currentYear = minDate.getFullYear(); // берем минимальную дату из базы
         currentMonth = minDate.getMonth();
         
     } catch (error) {
@@ -39,7 +38,6 @@ async function loadAvailableDates() {
     }
 }
 
-// Загрузка календаря
 async function loadCalendar() {
     try {
         const response = await fetch(`/api/calendar/${currentYear}/${currentMonth + 1}`);
@@ -50,20 +48,19 @@ async function loadCalendar() {
             return;
         }
         
-        // Обновляем заголовок месяца
-        document.getElementById('calendar-header').textContent = 
-            data.month_name;
         
-        // Обновляем год
-        document.getElementById('year-display').value = currentYear;
+        document.getElementById('calendar-header').textContent = data.month_name; //месяц берется текущий
         
-        // Генерируем календарь
-        const calendarGrid = document.getElementById('calendar-grid');
+        
+        document.getElementById('year-display').value = currentYear; // обновляем год
+        
+        
+        const calendarGrid = document.getElementById('calendar-grid'); // генерируем календарь
         calendarGrid.innerHTML = '';
         
         data.weeks.forEach(week => {
             week.forEach(day => {
-                const dayElement = document.createElement('div');
+                const dayElement = document.createElement('div'); //квадрат для даты каждой
                 
                 if (day === null) {
                     dayElement.className = 'calendar-day empty';
@@ -71,13 +68,10 @@ async function loadCalendar() {
                 } else {
                     dayElement.className = 'calendar-day';
                     dayElement.textContent = day.day;
-                    dayElement.dataset.date = day.date;
+                    dayElement.dataset.date = day.date; //полная дата атрибут
                     
-                    // Убираем точки под датами
-                    // dayElement.classList.add('has-data'); // Убираем эту строку
                     
-                    // Проверяем, выбрана ли дата
-                    if (selectedStartDate && day.date === selectedStartDate) {
+                    if (selectedStartDate && day.date === selectedStartDate) { //selectedStartDate дата которую выбрал пользователь
                         dayElement.classList.add('selected');
                     } else if (selectedEndDate && day.date === selectedEndDate) {
                         dayElement.classList.add('selected');
@@ -88,21 +82,20 @@ async function loadCalendar() {
                     dayElement.addEventListener('click', () => selectDate(day.date));
                 }
                 
-                calendarGrid.appendChild(dayElement);
+                calendarGrid.appendChild(dayElement); //добавляет созданный день в календарь
             });
         });
         
-        updateDateDisplay();
+        updateDateDisplay(); //обновление выбранных дат
         
     } catch (error) {
         console.error('Ошибка загрузки календаря:', error);
     }
 }
 
-// Изменение месяца
-function changeMonth(delta) {
+
+function changeMonth(delta) { //дельта +-1
     currentMonth += delta;
-    
     if (currentMonth < 0) {
         currentMonth = 11;
         currentYear--;
@@ -114,21 +107,21 @@ function changeMonth(delta) {
     loadCalendar();
 }
 
-// Изменение года
-function changeYear() {
+
+function changeYear() { 
     const yearInput = document.getElementById('year-display');
-    const newYear = parseInt(yearInput.value);
+    const newYear = parseInt(yearInput.value); //ввел пользователь
     
-    if (!isNaN(newYear) && newYear >= 2000 && newYear <= 2100) {
+    if (!isNaN(newYear) && newYear >= 1999 && newYear <= 2100) {
         currentYear = newYear;
         loadCalendar();
     } else {
-        yearInput.value = currentYear; // Возвращаем предыдущее значение
+        yearInput.value = currentYear; // возвращаем предыдущее значение
     }
 }
 
-// Выбор даты
-function selectDate(date) {
+
+function selectDate(date) { //выбор даты
     if (!selectedStartDate) {
         selectedStartDate = date;
     } else if (!selectedEndDate) {
@@ -147,8 +140,8 @@ function selectDate(date) {
     updateDateDisplay();
 }
 
-// Проверка даты в диапазоне
-function isDateInRange(date) {
+
+function isDateInRange(date) { //проверка даты в диапазоне
     if (!selectedStartDate || !selectedEndDate) return false;
     
     const checkDate = new Date(date);
@@ -158,8 +151,8 @@ function isDateInRange(date) {
     return checkDate >= startDate && checkDate <= endDate;
 }
 
-// Обновление отображения дат
-function updateDateDisplay() {
+
+function updateDateDisplay() { //обновление отображения дат
     const selectedRange = document.getElementById('selected-range');
     
     if (selectedStartDate && selectedEndDate) {
@@ -173,39 +166,36 @@ function updateDateDisplay() {
     }
 }
 
-// Форматирование даты
-function formatDate(dateString) {
+
+function formatDate(dateString) { //форматирование даты
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU', {
-        day: '2-digit',
+        day: '2-digit', //день двухзначный
         month: '2-digit',
         year: 'numeric'
     });
 }
 
-// Настройка обработчиков событий
-function setupEventListeners() {
-    // Автоматическое время
-    const autoTimeToggle = document.getElementById('auto-time');
+
+function setupEventListeners() { //настройка обработчиков событий
+    const autoTimeToggle = document.getElementById('auto-time'); //время внутри дня
     const timeInputs = document.getElementById('time-inputs');
     
     autoTimeToggle.addEventListener('change', function() {
-        timeInputs.style.display = this.checked ? 'none' : 'grid';
+        timeInputs.style.display = this.checked ? 'none' : 'grid'; //или скрывает или появляются плашки со временем
     });
-    
-    // Интервалы свечей
-    document.querySelectorAll('.interval-btn').forEach(btn => {
+
+    document.querySelectorAll('.interval-btn').forEach(btn => { //интервалы свечей
         btn.addEventListener('click', function() {
-            document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
+            document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('active')); 
+            this.classList.add('active'); //перемещение активной(выделенной кнопки)
             selectedInterval = this.dataset.interval;
             document.getElementById('interval-display').textContent = selectedInterval;
         });
     });
     
-    // Поле года
-    const yearInput = document.getElementById('year-display');
-    yearInput.addEventListener('blur', changeYear);
+    const yearInput = document.getElementById('year-display');  //поле года
+    yearInput.addEventListener('blur', changeYear); //срабатывает, когда поле теряет фокус
     yearInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             changeYear();
@@ -213,17 +203,17 @@ function setupEventListeners() {
     });
 }
 
-// Запуск анализа
+
 async function runAnalysis() {
     if (!selectedStartDate || !selectedEndDate) {
         alert('Пожалуйста, выберите начальную и конечную даты');
         return;
     }
     
-    const analyzeBtn = document.querySelector('.analyze-btn');
+    const analyzeBtn = document.querySelector('.analyze-btn'); //нажимает кнопку анализировать
     const originalText = analyzeBtn.innerHTML;
-    analyzeBtn.innerHTML = '<span class="icon">⏳</span><span>Анализ...</span>';
-    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<span class="icon"></span><span>Анализ...</span>';
+    analyzeBtn.disabled = true; //чтобы нельзя было нажать дважды
     
     try {
         const autoTime = document.getElementById('auto-time').checked;
@@ -240,7 +230,7 @@ async function runAnalysis() {
         };
         
         const response = await fetch('/api/analyze', {
-            method: 'POST',
+            method: 'POST', //передает данные
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -253,39 +243,38 @@ async function runAnalysis() {
             throw new Error(data.error || 'Ошибка анализа');
         }
         
-        // Обновляем статистику
-        document.getElementById('model-count').textContent = data.model_count;
-        document.getElementById('history-count').textContent = data.historical_count;
+        //обновляем статистику
+        document.getElementById('model-count').textContent = data.model_count; //кол-во свечей модели
+        document.getElementById('history-count').textContent = data.historical_count; //кол-во свечей из базы
         document.getElementById('interval-display').textContent = selectedInterval;
         document.getElementById('period-display').textContent = 
             `${formatDate(data.period.start)} - ${formatDate(data.period.end)}`;
         
-        // Создаём график
+        //график
         createAnalysisChart(data.model_candles, data.historical_candles);
         
-        // Показываем уведомление
+        //показ уведомления
         showNotification('Анализ завершен успешно!', 'success');
         
     } catch (error) {
-        console.error('Ошибка анализа:', error);
-        showNotification(`Ошибка: ${error.message}`, 'error');
+        console.error('Ошибка анализа:', error); //мне
+        showNotification(`Ошибка: ${error.message}`, 'error'); //пользователю
     } finally {
         analyzeBtn.innerHTML = originalText;
-        analyzeBtn.disabled = false;
+        analyzeBtn.disabled = false; //разблокирет кн. для нов. анализа
     }
 }
 
-// Создание графика анализа
+//создание графика анализа
 function createAnalysisChart(modelCandles, historicalCandles) {
     const ctx = document.getElementById('analysis-chart').getContext('2d');
     
-    // Удаляем старый график
+    
     if (analysisChart) {
-        analysisChart.destroy();
+        analysisChart.destroy(); //удаление старого графика
     }
     
-    // Подготавливаем данные
-    const modelData = modelCandles.map(candle => ({
+    const modelData = modelCandles.map(candle => ({ //предв. данные
         x: new Date(candle.time),
         o: candle.open,
         h: candle.high,
@@ -310,8 +299,8 @@ function createAnalysisChart(modelCandles, historicalCandles) {
                     label: 'Модель',
                     data: modelData,
                     color: {
-                        up: '#71BC78',  // Ваш зеленый для роста
-                        down: '#dc3545', // Красный для падения
+                        up: '#71BC78',  
+                        down: '#dc3545', 
                         unchanged: '#6c757d'
                     },
                     borderColor: '#71BC78',
@@ -333,7 +322,7 @@ function createAnalysisChart(modelCandles, historicalCandles) {
             ]
         },
         options: {
-            responsive: true,
+            responsive: true, //подстраивается под размер экрана
             maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
@@ -345,7 +334,7 @@ function createAnalysisChart(modelCandles, historicalCandles) {
                     position: 'top',
                     labels: {
                         usePointStyle: true,
-                        padding: 10,
+                        padding: 10, //отступ
                         font: {
                             size: 12,
                             family: 'Calibri, sans-serif'
@@ -361,11 +350,11 @@ function createAnalysisChart(modelCandles, historicalCandles) {
                     borderWidth: 1,
                     callbacks: {
                         label: function(context) {
-                            const datasetLabel = context.dataset.label || '';
+                            const datasetLabel = context.dataset.label || ''; //берем данные либо из модели, либо из базы данных
                             const point = context.raw;
                             return [
                                 `${datasetLabel}`,
-                                `Open: $${point.o.toFixed(2)}`,
+                                `Open: $${point.o.toFixed(2)}`, //до двух знаков после запятой
                                 `High: $${point.h.toFixed(2)}`,
                                 `Low: $${point.l.toFixed(2)}`,
                                 `Close: $${point.c.toFixed(2)}`
@@ -384,17 +373,17 @@ function createAnalysisChart(modelCandles, historicalCandles) {
                         }
                     },
                     grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
+                        color: 'rgba(0, 0, 0, 0.05)' //линии сетки
                     },
                     ticks: {
-                        color: '#6c757d',
+                        color: '#6c757d', //цвет подписей
                         font: {
                             family: 'Calibri, sans-serif'
                         }
                     }
                 },
                 y: {
-                    position: 'right',
+                    position: 'left',
                     grid: {
                         color: 'rgba(0, 0, 0, 0.05)'
                     },
@@ -419,16 +408,16 @@ function createAnalysisChart(modelCandles, historicalCandles) {
                 }
             },
             animation: {
-                duration: 500
+                duration: 500 //появляется график за 0,5 сек
             }
         }
     });
 }
 
-// Показать уведомление
-function showNotification(message, type = 'info') {
+
+function showNotification(message, type = 'info') { //уведомление
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `notification ${type}`; //type - success/error
     notification.textContent = message;
     notification.style.cssText = `
         position: fixed;
@@ -439,32 +428,32 @@ function showNotification(message, type = 'info') {
         color: white;
         border-radius: 6px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
+        z-index: 1000; 
         animation: slideIn 0.3s ease-out;
         font-family: Calibri, sans-serif;
         font-weight: 300;
     `;
     
-    document.body.appendChild(notification);
+    document.body.appendChild(notification); //добавляем на страницу
     
-    setTimeout(() => {
+    setTimeout(() => { //удаление через 3 сек
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    }, 3000); //0,3 сек ждем потом оно удаляется из html
 }
 
-// Emoji для действий
-function getActionEmoji(action) {
+
+function getActionText(action) {
     switch(action) {
-        case 'BUY': return '📈';
-        case 'SELL': return '📉';
-        case 'HOLD': return '⚖️';
-        default: return '❓';
+        case 'BUY': return 'Заметен рост';
+        case 'SELL': return 'Заметно снижение';
+        case 'HOLD': return 'Ни покупать, ни продавать';
+        default: return 'Что-то пошло не так';
     }
 }
 
-// Стили для анимаций
-const style = document.createElement('style');
+
+const style = document.createElement('style'); //cтили для анимаций css
 style.textContent = `
     @keyframes slideIn {
         from {

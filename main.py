@@ -1,9 +1,8 @@
-# main.py (ИНТЕГРИРОВАННАЯ ВЕРСИЯ)
 from fastapi import FastAPI, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware #фронт и api
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -16,19 +15,19 @@ from pydantic import BaseModel
 app = FastAPI(title="NVIDIA Trading Assistant")
 
 # CORS для локальной разработки
-app.add_middleware(
+app.add_middleware( #позволяет веб-странице, открытой на одном домене обращаться к API на другом домене
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=True, #отправка куки
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Подключаем файлы сайта (существующее)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.mount("/static", StaticFiles(directory="static"), name="static") #подключаем файлы сайта
 templates = Jinja2Templates(directory="templates")
 
-# ==================== НОВЫЕ МОДЕЛИ ДЛЯ ЗАПРОСОВ ====================
+# новые модели для запросов, то что оправляется для модели 
 class AnalysisRequest(BaseModel):
     start_date: str
     end_date: str
@@ -37,8 +36,8 @@ class AnalysisRequest(BaseModel):
     interval: str  # '15min', '30min', '1h', '90min', '3h', '5h', '1d'
     use_auto_time: bool = True
 
-# ==================== ЗАГРУЗКА ДАННЫХ (СУЩЕСТВУЮЩЕЕ) ====================
-print("⏳ Начинаю загрузку CSV...")
+#  загружием данные
+print("Начинаю загрузку CSV")
 start_time = time.time()
 
 df = None
@@ -46,7 +45,7 @@ last_candle_cache = None
 candles_cache = {}
 
 try:
-    # СУЩЕСТВУЮЩИЙ КОД загрузки CSV
+    # загрузка CSV
     df = pd.read_csv(
         "NVDA_CLEAN_15M.csv",
         usecols=['datetime', 'Open', 'High', 'Low', 'Close', 'Volume'],
@@ -59,16 +58,16 @@ try:
         }
     )
     
-    df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce', infer_datetime_format=True)
-    df = df.sort_values('datetime').reset_index(drop=True)
+    df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce', infer_datetime_format=True) #преобразование даты в норм дату
+    df = df.sort_values('datetime').reset_index(drop=True) #от старых к новым(но я думаю это не надо)
     
-    # Дополнительные колонки для новой функциональности
+    # доп колонки 
     df['date'] = df['datetime'].dt.date
     df['time'] = df['datetime'].dt.time
     
-    # Кэшируем последнюю свечу (существующее)
+
     if not df.empty:
-        last_row = df.iloc[-1]
+        last_row = df.iloc[-1] #сохраняем последнюю свечу
         last_candle_cache = {
             "datetime": str(last_row['datetime']),
             "Open": float(last_row['Open']),
@@ -79,10 +78,10 @@ try:
         }
     
     elapsed = time.time() - start_time
-    print(f"✅ CSV файл загружен: {len(df):,} строк за {elapsed:.2f} сек")
+    print(f"CSV файл загружен: {len(df):,} строк за {elapsed:.2f} сек")
     
 except Exception as e:
-    print(f"❌ Ошибка загрузки CSV: {e}")
+    print(f"Ошибка загрузки CSV: {e}") 
     df = pd.DataFrame()
     last_candle_cache = {
         "datetime": "2020-04-01 15:45:00",
@@ -90,13 +89,12 @@ except Exception as e:
         "Close": 243.02, "Volume": 536852
     }
 
-# ==================== НОВЫЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
 def parse_datetime_with_time(date_str: str, time_str: str = "09:30") -> datetime:
     """Парсинг даты с временем"""
     try:
-        return pd.to_datetime(f"{date_str} {time_str}")
+        return pd.to_datetime(f"{date_str} {time_str}") #преобразование строк в реальную дату
     except:
-        return pd.to_datetime(date_str)
+        return pd.to_datetime(date_str) 
 
 def resample_data_for_interval(dataframe: pd.DataFrame, interval: str) -> pd.DataFrame:
     """Ресемплинг данных по выбранному интервалу"""
@@ -115,12 +113,12 @@ def resample_data_for_interval(dataframe: pd.DataFrame, interval: str) -> pd.Dat
     freq = freq_map.get(interval, '15min')
     
     resampled = dataframe.resample(freq, on='datetime').agg({
-        'Open': 'first',
+        'Open': 'first', #если интервал 30 то берем открытие от 1 свечи
         'High': 'max',
         'Low': 'min',
         'Close': 'last',
         'Volume': 'sum'
-    }).dropna().reset_index()
+    }).dropna().reset_index() #удаление строк с пустыми значениями
     
     return resampled
 
@@ -131,34 +129,34 @@ def generate_model_prediction(historical_data: pd.DataFrame) -> pd.DataFrame:
     
     model_data = historical_data.copy()
     
-    # Имитация предсказания модели
+    # имитация предсказания модели
     np.random.seed(42)
     noise = np.random.normal(0, 0.02, len(model_data))
     
-    # Создаем "предсказанные" значения
+    # создаем "предсказанные" значения
     model_data['Close'] = model_data['Close'] * (1 + noise)
-    model_data['Open'] = model_data['Close'].shift(1).fillna(model_data['Open'])
-    model_data['High'] = model_data[['Open', 'Close']].max(axis=1) * (1 + abs(noise) * 0.3)
-    model_data['Low'] = model_data[['Open', 'Close']].min(axis=1) * (1 - abs(noise) * 0.3)
+    model_data['Open'] = model_data['Close'].shift(1).fillna(model_data['Open']) #сдвигает все цены закрытия на 1 строку вниз
+    model_data['High'] = model_data[['Open', 'Close']].max(axis=1) * (1 + abs(noise) * 0.3) #для каждой строки находит максимальное значение между Open и Close
+    model_data['Low'] = model_data[['Open', 'Close']].min(axis=1) * (1 - abs(noise) * 0.3) #находит минимум между Open и Close и уменьшает его
     
     return model_data
 
 def find_similar_pattern_in_history(model_data: pd.DataFrame, historical_df: pd.DataFrame) -> pd.DataFrame:
     """Поиск похожего паттерна в исторических данных"""
-    if len(model_data) < 3 or len(historical_df) < len(model_data):
+    if len(model_data) < 3 or len(historical_df) < len(model_data): #в предск < 3 cвечей или в базе < в модели
         return pd.DataFrame()
     
     pattern_length = min(len(model_data), 20)
     model_pattern = model_data.tail(pattern_length).copy()
     
-    # Ищем похожий паттерн по динамике изменений
-    model_returns = np.diff(model_pattern['Close'].values) / model_pattern['Close'].values[:-1]
+    # ищем похожий паттерн по динамике изменений
+    model_returns = np.diff(model_pattern['Close'].values) / model_pattern['Close'].values[:-1] #разница между сосед ценами
     
-    best_match_idx = 0
-    best_match_score = float('inf')
+    best_match_idx = 0 #номер строки лучш совп
+    best_match_score = float('inf') # оценка совп
     
-    # Поиск по всему историческому набору данных
-    for i in range(len(historical_df) - pattern_length):
+    # поиск по всему историческому набору данных
+    for i in range(len(historical_df) - pattern_length): #перебирает все возможные начальные позиции
         window = historical_df.iloc[i:i+pattern_length]
         window_returns = np.diff(window['Close'].values) / window['Close'].values[:-1]
         
@@ -171,21 +169,21 @@ def find_similar_pattern_in_history(model_data: pd.DataFrame, historical_df: pd.
     
     return historical_df.iloc[best_match_idx:best_match_idx+pattern_length].copy()
 
-# ==================== НОВЫЕ API ENDPOINTS ====================
+
+
+
 @app.post("/api/analyze")
 async def analyze_market_data(request: AnalysisRequest):
     """Основной endpoint для анализа с календаря"""
     try:
-        # 1. Парсим даты и времена
-        if request.use_auto_time:
+        if request.use_auto_time: # парсим даты и время
             start_dt = parse_datetime_with_time(request.start_date, "09:30")
             end_dt = parse_datetime_with_time(request.end_date, "16:00")
         else:
             start_dt = parse_datetime_with_time(request.start_date, request.start_time)
             end_dt = parse_datetime_with_time(request.end_date, request.end_time)
         
-        # 2. Фильтруем данные по выбранному периоду
-        mask = (df['datetime'] >= start_dt) & (df['datetime'] <= end_dt)
+        mask = (df['datetime'] >= start_dt) & (df['datetime'] <= end_dt) # фильтруем данные по выбранному периоду пока что только для базы данных
         period_data = df[mask].copy()
         
         if period_data.empty:
@@ -195,16 +193,13 @@ async def analyze_market_data(request: AnalysisRequest):
                 "period": f"{request.start_date} - {request.end_date}"
             }
         
-        # 3. Ресемплинг по выбранному интервалу
-        resampled_data = resample_data_for_interval(period_data, request.interval)
+        resampled_data = resample_data_for_interval(period_data, request.interval) # выбранный интервал
         
-        # 4. Генерируем данные модели (заглушка - будет заменено на реальную модель)
-        model_data = generate_model_prediction(resampled_data)
+        model_data = generate_model_prediction(resampled_data) #генерируем данные модели (заглушка - будет заменено на реальную модель)
+
         
-        # 5. Ищем похожий исторический паттерн
-        historical_pattern = find_similar_pattern_in_history(model_data, df)
+        historical_pattern = find_similar_pattern_in_history(model_data, df) # ищем похожий исторический паттерн
         
-        # 6. Подготавливаем данные для ответа
         model_candles = []
         for _, row in model_data.iterrows():
             model_candles.append({
@@ -227,7 +222,7 @@ async def analyze_market_data(request: AnalysisRequest):
                 "volume": int(row['Volume'])
             })
         
-        # 7. Возвращаем результат
+        # возвращаем результат
         return {
             "success": True,
             "model_candles": model_candles,
@@ -278,15 +273,13 @@ async def get_available_dates():
 async def get_calendar_month(year: int, month: int):
     """Возвращает календарь на конкретный месяц с данными о наличии свечей"""
     try:
-        # Фильтруем данные по месяцу
-        mask = (df['datetime'].dt.year == year) & (df['datetime'].dt.month == month)
+        mask = (df['datetime'].dt.year == year) & (df['datetime'].dt.month == month) # фильтруем данные по месяцу
         month_data = df[mask].copy()
         
-        # Создаем календарь
         import calendar
         cal = calendar.monthcalendar(year, month)
         
-        # Подготавливаем результат
+        # подготавливаем результат
         weeks = []
         for week in cal:
             week_data = []
@@ -294,7 +287,7 @@ async def get_calendar_month(year: int, month: int):
                 if day == 0:
                     week_data.append(None)
                 else:
-                    # Проверяем, есть ли данные за этот день
+                    # проверяем, есть ли данные за этот день
                     day_has_data = not month_data[month_data['datetime'].dt.day == day].empty
                     week_data.append({
                         "day": day,
@@ -314,13 +307,13 @@ async def get_calendar_month(year: int, month: int):
     except Exception as e:
         return {"error": f"Ошибка генерации календаря: {str(e)}"}
 
-# ==================== СУЩЕСТВУЮЩИЕ ENDPOINTS (БЕЗ ИЗМЕНЕНИЙ) ====================
 
-@app.get("/")
+
+@app.get("/") #передает html
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/api/predict")
+@app.get("/api/predict") #заглушка
 async def get_prediction():
     if df is None or df.empty:
         return {
@@ -349,12 +342,12 @@ async def get_last_candle():
 async def get_candles(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
-    limit: int = Query(50)
+    limit: int = Query(50) #сколько свечей выводится
 ):
     if df is None or df.empty:
         return {"error": "CSV файл не загружен"}
     
-    cache_key = f"{start_date}_{end_date}_{limit}"
+    cache_key = f"{start_date}_{end_date}_{limit}" #кэширование не делали ли уже такой запрос
     
     if cache_key in candles_cache:
         return candles_cache[cache_key]
@@ -363,7 +356,7 @@ async def get_candles(
     
     if start_date:
         try:
-            start_dt = pd.to_datetime(start_date)
+            start_dt = pd.to_datetime(start_date) #проверка формата даты
             mask = filtered_df['datetime'] >= start_dt
             filtered_df = filtered_df[mask]
         except:
@@ -377,11 +370,11 @@ async def get_candles(
         except:
             return {"error": "Неверный формат end_date"}
     
-    limit = min(limit, 200)
+    limit = min(limit, 200) #берем 200 свечей из базы данных за этот период
     if len(filtered_df) > limit:
         filtered_df = filtered_df.tail(limit)
     
-    candles = filtered_df.to_dict('records')
+    candles = filtered_df.to_dict('records') #преобразует базу в словари
     
     for candle in candles:
         candle['datetime'] = str(candle['datetime'])
@@ -408,7 +401,7 @@ async def get_stats():
     close_prices = df['Close'].values
     
     return {
-        "total_rows": len(df),
+        "total_rows": len(df), #сколько свечей в базе
         "date_range": {
             "start": str(df['datetime'].iloc[0]),
             "end": str(df['datetime'].iloc[-1])
@@ -421,7 +414,7 @@ async def get_stats():
         }
     }
 
-@app.get("/api/candles/{date_str}")
+@app.get("/api/candles/{date_str}") #свечи за опр день
 async def get_candles_by_date(date_str: str):
     if df is None or df.empty:
         return {"error": "CSV файл не загружен"}
@@ -430,11 +423,11 @@ async def get_candles_by_date(date_str: str):
         return candles_cache[date_str]
     
     try:
-        target_date = pd.to_datetime(date_str).date()
+        target_date = pd.to_datetime(date_str).date() #преобразование строки в дату без вр
         mask = df['datetime'].dt.date == target_date
         day_candles = df[mask]
         
-        candles = []
+        candles = [] #данные для JSON форматирются
         for _, row in day_candles.iterrows():
             candles.append({
                 "time": row['datetime'].strftime("%H:%M"),
@@ -458,13 +451,13 @@ async def get_candles_by_date(date_str: str):
     except Exception as e:
         return {"error": f"Ошибка: {str(e)}"}
 
-@app.get("/api/status")
+@app.get("/api/status") #возвращает информацию о состоянии сервера
 async def get_status():
     return {
         "status": "running",
         "csv_loaded": df is not None and not df.empty,
-        "csv_rows": len(df) if df is not None else 0,
-        "optimized": True,
+        "csv_rows": len(df) if df is not None else 0, #кол-во строк в базе
+        "optimized": True, #кэширование
         "cache_size": len(candles_cache),
         "api_endpoints": [
             "/api/predict",
@@ -473,28 +466,24 @@ async def get_status():
             "/api/stats",
             "/api/candles/{date}",
             "/api/status",
-            "/api/analyze",  # Новый endpoint
-            "/api/available-dates",  # Новый endpoint
-            "/api/calendar/{year}/{month}"  # Новый endpoint
+            "/api/analyze",  
+            "/api/available-dates",  
+            "/api/calendar/{year}/{month}" 
         ]
     }
-
-@app.get("/simple")
-async def simple_page(request: Request):
-    return templates.TemplateResponse("simple.html", {"request": request})
 
 @app.get("/api/clear-cache")
 async def clear_cache():
     candles_cache.clear()
     return {"message": "Кэш очищен", "cache_size": 0}
 
-# ==================== ЗАПУСК ====================
+#запуск
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8001,
+        port=8002,
         log_level="info",
         access_log=False
     )

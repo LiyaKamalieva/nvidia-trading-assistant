@@ -2,11 +2,11 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- моб прил -->
     <title>NVIDIA Trading Assistant</title>
     <link rel="stylesheet" href="/static/style.css">
     
-    <!-- Chart.js для графиков -->
+    <!-- график -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4"></script>
@@ -15,14 +15,13 @@
 <body>
     <div class="site-header">
         <h1>NVIDIA Trading Assistant</h1>
-        <p>Анализ рыночных данных NVIDIA с использованием ИИ-моделей</p>
+        <p>Рекомендательная система для анализа рыночных данных NVIDIA </p>
     </div>
 
     <div class="main-grid">
-        <!-- Левая часть: график -->
-        <div class="chart-section">
+        <div class="chart-section"> <!-- график -->
             <div class="chart-header">
-                <h2>📈 График анализа</h2>
+                <h2> График анализа</h2>
             </div>
             <div class="chart-container">
                 <canvas id="analysis-chart"></canvas>
@@ -48,19 +47,18 @@
             </div>
         </div>
 
-        <!-- Правая часть: управление -->
         <div class="control-panel">
-            <!-- Календарь -->
+            <!--календарь-->
             <div class="control-card">
                 <h3>Выбор периода</h3>
                 <div class="calendar-container">
                     <div class="year-display-container">
-                        <input type="number" id="year-display" class="year-display" value="2005" min="2000" max="2100">
+                        <input type="number" id="year-display" class="year-display" value="1999" min="1999" max="2100">
                     </div>
                     
                     <div class="calendar-navigation">
                         <button class="nav-btn" onclick="changeMonth(-1)">←</button>
-                        <div class="calendar-header" id="calendar-header">Январь</div>
+                        <div class="calendar-header" id="calendar-header">December</div>
                         <button class="nav-btn" onclick="changeMonth(1)">→</button>
                     </div>
                     
@@ -75,7 +73,7 @@
                     </div>
                     
                     <div class="calendar-grid" id="calendar-grid">
-                        <!-- Календарь будет загружен через JS -->
+                        <!-- календарь загружен через JS -->
                     </div>
                     
                     <div class="selected-range" id="selected-range">
@@ -84,7 +82,7 @@
                 </div>
             </div>
 
-            <!-- Время -->
+            <!-- время -->
             <div class="control-card">
                 <h3>Время торгов</h3>
                 <div class="time-selection">
@@ -108,7 +106,7 @@
                 </div>
             </div>
 
-            <!-- Интервал -->
+            <!-- интервал -->
             <div class="control-card">
                 <h3>Интервал свечей</h3>
                 <div class="interval-selector">
@@ -122,9 +120,8 @@
                 </div>
             </div>
 
-            <!-- Кнопка анализа -->
+            <!-- кнопка анализа -->
             <button class="analyze-btn" onclick="runAnalysis()">
-                <span class="icon">🚀</span>
                 <span>Запустить анализ</span>
             </button>
         </div>

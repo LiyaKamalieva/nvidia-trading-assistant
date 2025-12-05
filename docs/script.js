@@ -406,4 +406,4 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Инициализация завершена
-console.log('✅ Интерфейс NVIDIA Trading Assistant готов к работе');
+console.log(' Интерфейс NVIDIA Trading Assistant готов к работе');
